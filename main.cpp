@@ -4,9 +4,11 @@
 #include <string>
 #include <sstream>
 #include <map>
-#define ENVNAME "quash"
 #define MAX_ARGS 100
+#define INTERFACE_PREFIX "quash"
+#define INTERFACE_SEPARATOR ":"
 #define INTERFACE_SUFFIX ">>"
+
 
 using namespace std;
 
@@ -20,7 +22,7 @@ prompt(string cwd, string *argv)
 	string input;
 	int argc = 0;
 
-	cout << ENVNAME << ':' << cwd << INTERFACE_SUFFIX << ' ';
+	cout << INTERFACE_PREFIX << INTERFACE_SEPARATOR << cwd << INTERFACE_SUFFIX << ' ';
 	getline(cin, input);
 	stringstream ss(input);
 
