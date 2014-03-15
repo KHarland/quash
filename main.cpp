@@ -4,14 +4,25 @@
 #include <string>
 #include <sstream>
 #include <map>
+
+/* MAX_ARGS
+ * This is the maximum number of arguments that can be passed via the command 
+ * line to quash. in reality qargv should be able to handle an arbitrarily
+ * large number of arguments, but for the sake of this argument, we will use
+ * a simple constant length array to keep from having to resize the qargv
+ * array for different numbers of arguments
+ */
 #define MAX_ARGS 100
+
+/* INTERFACE_[PREFX|SEPARATOR|SUFFIX]
+ * These constants make up the title that gets displayed when the user is 
+ * prompted for input via the command line. 
+ */
 #define INTERFACE_PREFIX "quash"
 #define INTERFACE_SEPARATOR ":"
 #define INTERFACE_SUFFIX ">>"
 
-
 using namespace std;
-
 
 /*
  * Display command line message to prompt user for input
@@ -32,7 +43,6 @@ prompt(string cwd, string *argv)
 	return argc;
 }
 
-
 /*
  * Environment variable initalizations for quash
  */
@@ -43,7 +53,6 @@ init(map<string, string> *envVars)
 	envVars->insert(pair<string, string>("HOME", getenv("HOME")));
 	envVars->insert(pair<string, string>("CWD", getenv("HOME")));
 }
-
 
 /* 
  * Deallocated memory and exit program
