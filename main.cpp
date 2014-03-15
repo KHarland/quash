@@ -32,7 +32,7 @@ prompt(string cwd, string *argv)
 
 
 /*
- * Initalizations for quash. Pre-input 
+ * Environment variable initalizations for quash
  */
 void 
 init(map<string, string> *envVars)
