@@ -25,6 +25,15 @@
 using namespace std;
 
 /*
+ * Get an environment variable
+ */
+const char *
+get_env(map<string, string> *envVars, string name)
+{
+	return envVars->find(name)->second.c_str();
+}
+
+/*
  * Display command line message to prompt user for input
  */
 int
@@ -52,7 +61,10 @@ init(map<string, string> *envVars)
 	envVars->insert(pair<string, string>("PATH", "./bin"));
 	envVars->insert(pair<string, string>("HOME", getenv("HOME")));
 	envVars->insert(pair<string, string>("CWD", getenv("HOME")));
+	chdir(get_env(envVars, "CWD"));
 }
+
+
 
 /* 
  * Deallocated memory and exit program
@@ -74,7 +86,7 @@ main(int argc, char *argv[])
 	do
 	{
 		// Prompt user for input
-		qargc = prompt(envVars.find("CWD")->second, qargv);
+		qargc = prompt(get_env(&envVars, "CWD"), qargv);
 		
 	} while(qargv[0].compare("exit") != 0 && qargv[0].compare("quit") != 0);
 
