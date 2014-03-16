@@ -1,5 +1,7 @@
+BUILTIN="bin"
+
 all:
-	g++ main.cpp -o quash
+	g++ -I$(BUILTIN) main.cpp -o quash
 
 clean:
 	rm quash
