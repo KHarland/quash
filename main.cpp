@@ -3,7 +3,13 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <unistd.h>
 #include <map>
+
+/* CWD_BUFSIZE
+ * buffer size for char buffer the holds the current working directory
+ */
+#define CWD_BUFSIZE 1024
 
 /* MAX_ARGS
  * This is the maximum number of arguments that can be passed via the command 
@@ -28,7 +34,7 @@ using namespace std;
  * Get an environment variable
  */
 const char *
-get_env(map<string, string> *envVars, string name)
+qgetenv(map<string, string> *envVars, string name)
 {
 	return envVars->find(name)->second.c_str();
 }
@@ -60,11 +66,8 @@ init(map<string, string> *envVars)
 {
 	envVars->insert(pair<string, string>("PATH", "./bin"));
 	envVars->insert(pair<string, string>("HOME", getenv("HOME")));
-	envVars->insert(pair<string, string>("CWD", getenv("HOME")));
-	chdir(get_env(envVars, "CWD"));
+	chdir(qgetenv(envVars, "HOME"));
 }
-
-
 
 /* 
  * Deallocated memory and exit program
@@ -79,6 +82,7 @@ main(int argc, char *argv[])
 	map<string, string> envVars;
 	string qargv[MAX_ARGS];
 	int qargc = 0;
+	char cwd[CWD_BUFSIZE];
 
 	// Set up the quash environment
 	init(&envVars);
@@ -86,7 +90,8 @@ main(int argc, char *argv[])
 	do
 	{
 		// Prompt user for input
-		qargc = prompt(get_env(&envVars, "CWD"), qargv);
+		getcwd(cwd, CWD_BUFSIZE);
+		qargc = prompt(cwd, qargv);
 		
 	} while(qargv[0].compare("exit") != 0 && qargv[0].compare("quit") != 0);
 
