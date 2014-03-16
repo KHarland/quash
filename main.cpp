@@ -1,10 +1,18 @@
+//C++ libs
 #include <cstdlib>
 #include <iostream>
 #include <vector>
 #include <string>
 #include <sstream>
-#include <unistd.h>
 #include <map>
+#include <typeinfo>
+//Unix libs
+#include <unistd.h>
+#include <dirent.h>
+#include <string.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <errno.h>
 
 /* CWD_BUFSIZE
  * buffer size for char buffer the holds the current working directory
@@ -30,6 +38,72 @@
 
 using namespace std;
 
+
+/*-----------------------------------------------
+   BUILT-IN SYSTEM TOOLS
+---------------------------------------------- */
+
+/* 
+ * Change working directory to path
+ */
+void
+cd(const char* path)
+{
+	if (chdir(path) < 0)
+		perror("error");
+}
+
+/* 
+ * Print the current working directory
+ */
+void
+pwd()
+{
+	char cwd[CWD_BUFSIZE];
+
+	if(getcwd(cwd, CWD_BUFSIZE) == NULL)
+		perror("error");
+	else
+		cout << cwd << endl;
+}
+
+/*
+ * List the specified path
+ */
+void
+ls(const char* path)
+{
+	int lasterr = errno;
+	DIR *dir;
+	const dirent *entry;
+	
+    dir = opendir(path);
+
+	if (dir == NULL) {
+		perror("error");
+	} else {
+		while (entry = readdir(dir))
+		{
+			if (entry == NULL) {
+				if (lasterr != errno)
+					perror("error");
+				else 
+					break;
+			} else {
+				cout << entry->d_name << endl;
+			}
+		}
+		
+		closedir(dir);
+	}
+	
+}
+
+
+/*-----------------------------------------------
+   QUASH UTILITY FUNCTIONS
+---------------------------------------------- */
+
 /*
  * Get an environment variable
  */
@@ -43,19 +117,22 @@ qgetenv(map<string, string> *envVars, string name)
  * Display command line message to prompt user for input
  */
 int
-prompt(string cwd, string *argv)
+prompt(string cwd, char *qargv[])
 {
-	string input;
-	int argc = 0;
+	string input, qarg;
+	int qargc = 0;
 
 	cout << INTERFACE_PREFIX << INTERFACE_SEPARATOR << cwd << INTERFACE_SUFFIX << ' ';
 	getline(cin, input);
 	stringstream ss(input);
 
 	while(ss.good())
-		ss >> argv[argc++];
+	{
+		ss >> qarg;
+		strcpy(qargv[qargc++], qarg.c_str());
+	}
 
-	return argc;
+	return qargc;
 }
 
 /*
@@ -65,8 +142,8 @@ void
 init(map<string, string> *envVars)
 {
 	envVars->insert(pair<string, string>("PATH", "./bin"));
-	envVars->insert(pair<string, string>("HOME", getenv("HOME")));
-	chdir(qgetenv(envVars, "HOME"));
+	envVars->insert(pair<string, string>("HOME", getenv("HOME"));
+	chdir(getenv("HOME"));
 }
 
 /* 
@@ -76,26 +153,60 @@ void
 smash(){;}
 
 
+/*-----------------------------------------------
+   MAIN IMPLEMENTATION
+---------------------------------------------- */
+
 int 
 main(int argc, char *argv[])
 {
 	map<string, string> envVars;
-	string qargv[MAX_ARGS];
+	char *qargv[MAX_ARGS];
 	int qargc = 0;
 	char cwd[CWD_BUFSIZE];
 
 	// Set up the quash environment
 	init(&envVars);
 
+	// Set up space for input args
+	for(int i=0; i<MAX_ARGS; i++)
+		qargv[i] = new char[256];
+
+	// User input loop
 	do
 	{
-		// Prompt user for input
+		// Get command
 		getcwd(cwd, CWD_BUFSIZE);
 		qargc = prompt(cwd, qargv);
-		
-	} while(qargv[0].compare("exit") != 0 && qargv[0].compare("quit") != 0);
+
+		// Run cd
+		if (strcmp(qargv[0], "cd") == 0) {
+			if (qargc < 2)
+				cd(getenv("HOME"));
+			else
+				cd(qargv[1]);
+		}
+
+		// Run pwd
+		else if (strcmp(qargv[0], "pwd") == 0) {
+			pwd();
+		}
+
+		// Run ls
+		else if(strcmp(qargv[0], "ls") == 0) {
+			if (qargc < 2)
+				ls(cwd);
+			else
+				ls(qargv[1]);
+		}
+
+	} while(strcmp(qargv[0], "exit") != 0 && strcmp(qargv[0], "quit") != 0);
 
 	//deallocate variables and exit quash
-    smash();
+	for(int i=0; i<MAX_ARGS; i++)
+		delete [] qargv[i];
+
+	smash();
+
 	return 0;
 }
