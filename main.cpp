@@ -82,7 +82,7 @@ ls(const char* path)
 	if (dir == NULL) {
 		perror("error");
 	} else {
-		while (entry = readdir(dir))
+		while ((entry = readdir(dir)))
 		{
 			if (entry == NULL) {
 				if (lasterr != errno)
@@ -142,7 +142,7 @@ void
 init(map<string, string> *envVars)
 {
 	envVars->insert(pair<string, string>("PATH", "./bin"));
-	envVars->insert(pair<string, string>("HOME", getenv("HOME"));
+	envVars->insert(pair<string, string>("HOME", getenv("HOME")));
 	chdir(getenv("HOME"));
 }
 
