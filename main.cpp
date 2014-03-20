@@ -121,7 +121,7 @@ main(int argc, char *argv[])
 		// Run cd
 		if (strcmp(qargv[0], "cd") == 0) {
 			if (qargc < 2)
-				cd(getenv("HOME"));
+				cd(qgetenv(&envVars, "HOME"));
 			else
 				cd(qargv[1]);
 		}
@@ -171,7 +171,7 @@ main(int argc, char *argv[])
 			}
 
 			// Error
-			//cout << "'" << qargv[0] << "'" << " is an unrecognized command" << endl;
+			//cout << "'" << qargv[0] << "'" << " is not a recognized command" << endl;
 		}
 
 	} while(strcmp(qargv[0], "exit") != 0 && strcmp(qargv[0], "quit") != 0);
