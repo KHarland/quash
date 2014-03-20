@@ -157,7 +157,18 @@ main(int argc, char *argv[])
 		else {
 			// Search PATH and current directory
 
-			// Check if foreground or background
+			// Check if foreground or background (&)
+			// need to use waitpid() somehow. need read manual.
+			if (strcmp(qargv[qargc-1], "&") == 0) {
+				int pid = fork();
+				if (pid == 0) {
+					execl(qargv[0], qargv[0], NULL);
+				} else {
+					qargc = prompt(cwd, qargv);
+				}
+			} else {
+				system(qargv[0]);
+			}
 
 			// Error
 			//cout << "'" << qargv[0] << "'" << " is an unrecognized command" << endl;
