@@ -148,11 +148,19 @@ main(int argc, char *argv[])
 			}
 		}
 
-		// Program execution
+		// clear
+		else if (strcmp(qargv[0], "clear") == 0) {
+			system("clear");
+		}
 
-		// Error
+		// Program Execution
 		else {
-			cout << "'" << qargv[0] << "'" << " is an unrecognized command" << endl;
+			// Search PATH and current directory
+
+			// Check if foreground or background
+
+			// Error
+			//cout << "'" << qargv[0] << "'" << " is an unrecognized command" << endl;
 		}
 
 	} while(strcmp(qargv[0], "exit") != 0 && strcmp(qargv[0], "quit") != 0);
