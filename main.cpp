@@ -150,6 +150,11 @@ main(int argc, char *argv[])
 
 		// Program execution
 
+		// Error
+		else {
+			cout << "'" << qargv[0] << "'" << " is an unrecognized command" << endl;
+		}
+
 	} while(strcmp(qargv[0], "exit") != 0 && strcmp(qargv[0], "quit") != 0);
 
 	//deallocate variables and exit quash
