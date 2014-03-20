@@ -59,7 +59,7 @@ ls(const char* path)
 	if (dir == NULL) {
 		perror("error");
 	} else {
-		while (entry = readdir(dir))
+		while ((entry = readdir(dir)))
 		{
 			if (entry == NULL) {
 				if (lasterr != errno)

@@ -139,6 +139,17 @@ main(int argc, char *argv[])
 				ls(qargv[1]);
 		}
 
+		// Set env variables
+		else if (strcmp(qargv[0], "set") == 0) {
+			if (qargc > 2) {
+				envVars[qargv[1]] = qargv[2];
+			} else {
+				cout << "usage: set environment_variable value" << endl;
+			}
+		}
+
+		// Program execution
+
 	} while(strcmp(qargv[0], "exit") != 0 && strcmp(qargv[0], "quit") != 0);
 
 	//deallocate variables and exit quash
