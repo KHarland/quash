@@ -53,6 +53,16 @@ qgetenv(map<string, string> *envVars, string name)
 }
 
 /*
+ * Set an environment variable
+ */
+void
+qsetenv(map<string, string> *envVars, char *name, char *value)
+{
+	(*envVars)[string(name)] = string(value);
+}
+
+
+/*
  * Display command line message to prompt user for input
  */
 int
@@ -139,12 +149,26 @@ main(int argc, char *argv[])
 				ls(qargv[1]);
 		}
 
-		// Set env variables
+		// Run set
 		else if (strcmp(qargv[0], "set") == 0) {
 			if (qargc > 2) {
-				envVars[qargv[1]] = qargv[2];
+				qsetenv(&envVars, qargv[1], qargv[2]);
 			} else {
 				cout << "usage: set environment_variable value" << endl;
+			}
+		}
+
+		// Run get
+		else if (strcmp(qargv[0], "get") == 0) {
+			if (qargc > 1) {
+				const char* value = qgetenv(&envVars, qargv[1]);
+
+				if (strcmp(value, qargv[1]) == 0)
+					cout << "Item does not exist" << endl;
+				else
+					cout << qargv[1] << ":" << qgetenv(&envVars, qargv[1]) << endl;
+			} else {
+				cout << "usage: get environment_variable" << endl;
 			}
 		}
 
