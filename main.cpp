@@ -135,21 +135,8 @@ main(int argc, char *argv[])
 				cd(qargv[1]);
 		}
 
-		// Run pwd
-		else if (strcmp(qargv[0], "pwd") == 0) {
-			pwd();
-		}
-
-		// Run ls
-		else if(strcmp(qargv[0], "ls") == 0) {
-			if (qargc < 2)
-				ls(cwd);
-			else
-				ls(qargv[1]);
-		}
-
 		// Run set
-		else if (strcmp(qargv[0], "set") == 0) {
+		if (strcmp(qargv[0], "set") == 0) {
 			if (qargc > 2) {
 				qsetenv(&envVars, qargv[1], qargv[2]);
 			} else {
@@ -171,11 +158,6 @@ main(int argc, char *argv[])
 			}
 		}
 
-		// clear
-		else if (strcmp(qargv[0], "clear") == 0) {
-			system("clear");
-		}
-
 		// Program Execution
 		else {
 			// Search PATH and current directory
@@ -184,11 +166,8 @@ main(int argc, char *argv[])
 			// need to use waitpid() somehow. need read manual.
 			if (strcmp(qargv[qargc-1], "&") == 0) {
 				int pid = fork();
-				if (pid == 0) {
+				if (pid == 0)
 					execl(qargv[0], qargv[0], NULL);
-				} else {
-					qargc = prompt(cwd, qargv);
-				}
 			} else {
 				system(qargv[0]);
 			}
