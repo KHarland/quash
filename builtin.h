@@ -12,13 +12,9 @@
 using namespace std;
 
 /* CWD_BUFSIZE
- * buffer size for char buffer the holds the current working directory
+ * buffer size for char buffer the holds the current working directory name
  */
 #define CWD_BUFSIZE 1024
-
-/*-----------------------------------------------
-   BUILT-IN SYSTEM TOOLS
----------------------------------------------- */
 
 /* 
  * Change working directory to path
