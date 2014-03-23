@@ -96,11 +96,10 @@ init(map<string, string> *envVars)
 }
 
 /* 
- * Deallocated memory and exit program
+ * Deallocate memory and exit program
  */
 void
 smash(){;}
-
 
 /*-----------------------------------------------
    MAIN IMPLEMENTATION
