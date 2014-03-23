@@ -35,7 +35,7 @@
  */
 #define INTERFACE_PREFIX "quash"
 #define INTERFACE_SEPARATOR ":"
-#define INTERFACE_SUFFIX ">>"
+#define INTERFACE_SUFFIX ">"
 
 using namespace std;
 
