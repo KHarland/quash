@@ -134,20 +134,23 @@ prompt(string cwd, char *qargv[])
  * Environment variable initalizations for quash
  */
 void 
-init(map<string, string> *envVars)
+welcome()
 {
 	ifstream inf(".quashrc");
 	cout	<< "-------------------------------------------------" << endl
 		<< "        Quash v1.0.0  Copyright (c) 2014         " << endl
 		<< "      Authors: Kendal Harland   Adam Smith       " << endl
 		<< "-------------------------------------------------" << endl;
-	
-	while (inf.good())
-		cout << inf;
-	
-	cout	<< "-------------------------------------------------" << endl;
-	
-	//cdir(getenv("HOME"));
+
+	while (!inf.eof())
+	{
+		string line;
+		getline(inf, line);
+
+		cout << line << endl;
+	}	
+
+	cout	<< "-------------------------------------------------" << endl;	
 }
 
 /* 
@@ -163,14 +166,12 @@ smash(){;}
 int 
 main(int argc, char *argv[])
 {
-	map<string, string> envVars;
-	char *qargv[MAX_ARGS];
+	char *qargv[MAX_ARGS], cwd[CWD_BUFSIZE];
 	int qargc;
-	char cwd[CWD_BUFSIZE];
 	pid_t pid;
 
-	// Set up the quash environment
-	init(&envVars);
+	// Welcome
+	welcome();
 
 	// Set up space for input args
 	for(int i=0; i<MAX_ARGS; i++)
