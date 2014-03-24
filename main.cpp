@@ -239,23 +239,30 @@ main(int argc, char *argv[])
 
 				while(ss.good())
 				{
+					// get next path
 					getline(ss, curPath, PATH_DELIM);
 
+					// zero the cmdbuf
 					memset(cmdbuf, 0, 128);
 					cmdbuf[0] = '\0';
 
+					// set first param as path to executable
 					strcat(cmdbuf, curPath.c_str());
 					strcat(cmdbuf, "/");
 					strcat(cmdbuf, qargv[0]);
 
+					// replace the last argument with NULL pointer
+					// if the last argument is an ampersand
 					if (strcmp(qargv[qargc-1], "&") == 0)
 						qargv[qargc-1] = NULL;
 					else
 						qargv[qargc] = NULL;
 
+					// execute
 					execv(cmdbuf, qargv);
 				}
 
+				// command not found
 				perror(qargv[0]);
 				exit(-1);
 				
