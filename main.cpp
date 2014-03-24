@@ -72,7 +72,7 @@ handleChildDone(int signal)
 
 	if (pid == -1) {
 		perror("error");
-    	return; 
+	    	return; 
   	}
 
 	if (pid > 0) {
@@ -126,6 +126,7 @@ prompt(string cwd, char *qargv[])
 		ss >> qarg;
 		strcpy(qargv[qargc++], qarg.c_str());
 	}
+
 	return qargc;
 }
 
@@ -135,9 +136,18 @@ prompt(string cwd, char *qargv[])
 void 
 init(map<string, string> *envVars)
 {
-	envVars->insert(pair<string, string>("PATH", "/bin:/usr/bin"));
-	envVars->insert(pair<string, string>("HOME", getenv("HOME")));
-	chdir(getenv("HOME"));
+	ifstream inf(".quashrc");
+	cout	<< "-------------------------------------------------" << endl
+		<< "        Quash v1.0.0  Copyright (c) 2014         " << endl
+		<< "      Authors: Kendal Harland   Adam Smith       " << endl
+		<< "-------------------------------------------------" << endl;
+	
+	while (inf.good())
+		cout << inf;
+	
+	cout	<< "-------------------------------------------------" << endl;
+	
+	//cdir(getenv("HOME"));
 }
 
 /* 
@@ -183,7 +193,7 @@ main(int argc, char *argv[])
 				cd(getenv("HOME"));
 			} else {
 				if (cd(qargv[1]) < 0)
-					cout << qargv[1] << ": no such directory" << endl;
+					perror("cd");
 			}
 		}
 
