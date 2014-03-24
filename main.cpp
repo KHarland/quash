@@ -1,4 +1,3 @@
-//C++ libs
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -6,7 +5,6 @@
 #include <sstream>
 #include <fstream>
 #include <map>
-//Unix libs
 #include <unistd.h>
 #include <dirent.h>
 #include <string.h>
@@ -15,49 +13,41 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-//quash libs
 #include "builtin.h"
+#include "job.h"
+
+using namespace std;
 
 /* CWD_BUFSIZE
  * buffer size for char buffer the holds the current working directory
- */
-#define CWD_BUFSIZE 1024
-
-/* MAX_ARGS
+ * 
+ * MAX_ARGS
  * This is the maximum number of arguments that can be passed via the command 
  * line to quash. in reality qargv should be able to handle an arbitrarily
  * large number of arguments, but for the sake of this argument, we will use
  * a simple constant length array to keep from having to resize the qargv
  * array for different numbers of arguments
- */
-#define MAX_ARGS 100
-
-/* PATH_DELIM
+ * 
+ * PATH_DELIM
  * Delimiter for directories of PATH environment variables
- */
-#define PATH_DELIM ':'
-
-/* ENV_DELIM 
+ * 
+ * ENV_DELIM 
  * Delimiter for environment variables
- */
-#define ENV_DELIM '='
-
-/* INTERFACE_[PREFX|SEPARATOR|SUFFIX]
+ * 
+ * INTERFACE_[PREFX|SEPARATOR|SUFFIX]
  * These constants make up the title that gets displayed when the user is 
  * prompted for input via the command line. 
  */
+#define CWD_BUFSIZE 1024
+#define MAX_ARGS 100
+#define PATH_DELIM ':'
+#define ENV_DELIM '='
 #define INTERFACE_PREFIX "quash"
 #define INTERFACE_SEPARATOR ":"
 #define INTERFACE_SUFFIX ">"
 
-using namespace std;
-
-// pid of the current foreground process
 pid_t fpid = -1;
-
-// status of main thread foreground execution
 bool fg_exec = false;
-
 
 /*
  * Signal handler for child processes
@@ -72,7 +62,7 @@ handleChildDone(int signal)
 
 	if (pid == -1) {
 		perror("error");
-	    	return; 
+	    return;
   	}
 
 	if (pid > 0) {
@@ -138,9 +128,9 @@ welcome()
 {
 	ifstream inf(".quashrc");
 	cout	<< "-------------------------------------------------" << endl
-		<< "        Quash v1.0.0  Copyright (c) 2014         " << endl
-		<< "      Authors: Kendal Harland   Adam Smith       " << endl
-		<< "-------------------------------------------------" << endl;
+			<< "        Quash v1.0.0  Copyright (c) 2014         " << endl
+			<< "      Authors: Kendal Harland   Adam Smith       " << endl
+			<< "-------------------------------------------------" << endl;
 
 	while (!inf.eof())
 	{
@@ -164,7 +154,7 @@ smash(){;}
 ---------------------------------------------- */
 
 int 
-main(int argc, char *argv[])
+main(int argc, char *argv[], char **envp)
 {
 	char *qargv[MAX_ARGS], cwd[CWD_BUFSIZE];
 	int qargc;
