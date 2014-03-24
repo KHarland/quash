@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <map>
 //Unix libs
 #include <unistd.h>
@@ -11,8 +12,9 @@
 #include <string.h>
 #include <signal.h>
 #include <stdio.h>
-#include <sys/types.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "builtin.h"
 
@@ -30,6 +32,11 @@
  */
 #define MAX_ARGS 100
 
+/* PATH_DELIM
+ * Delimiter for directories of PATH environment variables
+ */
+#define PATH_DELIM ':'
+
 /* INTERFACE_[PREFX|SEPARATOR|SUFFIX]
  * These constants make up the title that gets displayed when the user is 
  * prompted for input via the command line. 
@@ -42,39 +49,44 @@ using namespace std;
 
 // pid of the current foreground process
 pid_t fpid = -1;
+
+// status of main thread foreground execution
 bool fg_exec = false;
 
+
+/*
+ * Signal handler for child processes
+ */
 void 
 handleChildDone(int signal)
 {
-  pid_t pid;
-  int status;
+	pid_t pid;
+	int status;
 
-  pid = waitpid(WAIT_ANY, &status, WNOHANG | WUNTRACED);
+	pid = waitpid(WAIT_ANY, &status, WNOHANG | WUNTRACED);
 
-  if (pid == -1) {
-  	perror("error");
-    return; 
-  }
+	if (pid == -1) {
+		perror("error");
+    	return; 
+  	}
 
-  if (pid > 0) {
+	if (pid > 0) {
   	
-  	if (fpid == pid) {
-  		fpid = -1;
-  		fg_exec = false;
-  	}
+	  	if (fpid == pid) {
+	  		fpid = -1;
+	  		fg_exec = false;
+	  	}
 
-    if (WIFSIGNALED(status)) {
-       printf("[%d] Terminated (Signal %d)\n", pid, WTERMSIG(status));
-       return;
-    }
+		if (WIFSIGNALED(status)) {
+			printf("[%d] Terminated (Signal %d)\n", pid, WTERMSIG(status));
+			return;
+		}
 
-  	if (WIFSTOPPED(status)) {
-  		printf("[%d] Finished (Signal %d)\n", pid, WSTOPSIG(status));
-  	    return;
-  	}
-
-  }
+		if (WIFSTOPPED(status)) {
+			printf("[%d] Finished (Signal %d)\n", pid, WSTOPSIG(status));
+			return;
+		}
+	}
 }
 
 /*-----------------------------------------------
@@ -111,6 +123,10 @@ prompt(string cwd, char *qargv[])
 
 	cout << INTERFACE_PREFIX << INTERFACE_SEPARATOR << cwd << INTERFACE_SUFFIX << ' ';
 	getline(cin, input);
+
+	if (input.length() == 0)
+		return qargc;
+
 	stringstream ss(input);
 
 	while(ss.good())
@@ -118,7 +134,6 @@ prompt(string cwd, char *qargv[])
 		ss >> qarg;
 		strcpy(qargv[qargc++], qarg.c_str());
 	}
-
 	return qargc;
 }
 
@@ -128,7 +143,7 @@ prompt(string cwd, char *qargv[])
 void 
 init(map<string, string> *envVars)
 {
-	envVars->insert(pair<string, string>("PATH", "./bin"));
+	envVars->insert(pair<string, string>("PATH", "/bin:/usr/bin"));
 	envVars->insert(pair<string, string>("HOME", getenv("HOME")));
 	chdir(getenv("HOME"));
 }
@@ -159,7 +174,7 @@ main(int argc, char *argv[])
 	for(int i=0; i<MAX_ARGS; i++)
 		qargv[i] = new char[256];
 
-    signal(SIGCHLD, handleChildDone);
+	signal(SIGCHLD, handleChildDone);
 
 	// User input loop
 	do
@@ -177,7 +192,7 @@ main(int argc, char *argv[])
 		}
 
 		// Run set
-		if (strcmp(qargv[0], "set") == 0) {
+		else if (strcmp(qargv[0], "set") == 0) {
 			if (qargc > 2) {
 				qsetenv(&envVars, qargv[1], qargv[2]);
 			} else {
@@ -200,26 +215,47 @@ main(int argc, char *argv[])
 		}
 
 		// Program Execution
-		else {
+		else if(qargc > 0) {
 			pid = fork();
             
-			// Search PATH and current directory
-			// Check if foreground or background (&)
-			// need to use waitpid() somehow. need read manual.
 			if (pid == 0) {
-				execl(qargv[0], qargv[0], NULL);
-				exit(0);
-            } else {
+				
+				stringstream ss(qgetenv(&envVars, "PATH"));
+				string curPath;
+				char cmdbuf[128];
+
+				while(ss.good())
+				{
+					getline(ss, curPath, PATH_DELIM);
+
+					memset(cmdbuf, 0, 128);
+					cmdbuf[0] = '\0';
+
+					strcat(cmdbuf, curPath.c_str());
+					strcat(cmdbuf, "/");
+					strcat(cmdbuf, qargv[0]);
+
+					if (strcmp(qargv[qargc-1], "&") == 0)
+						qargv[qargc-1] = NULL;
+					else
+						qargv[qargc] = NULL;
+
+					execv(cmdbuf, qargv);
+				}
+
+				perror(qargv[0]);
+				exit(-1);
+				
+			} else {
+				
 				if (strcmp(qargv[qargc-1], "&") == 0) {
 					printf("[%d] Running in background\n", pid);
 				} else {
 					fpid = pid;
-                	fg_exec = true;
-			    	while(fg_exec) pause();
+ 					fg_exec = true;
+					while(fg_exec) pause();
 				}
 			}
-			// Error
-			//cout << "'" << qargv[0] << "'" << " is not a recognized command" << endl;
 		}
 
 	} while(strcmp(qargv[0], "exit") != 0 && strcmp(qargv[0], "quit") != 0);
