@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <string.h>
+#include <signal.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <errno.h>
@@ -39,6 +40,43 @@
 
 using namespace std;
 
+// pid of the current foreground process
+pid_t fpid = -1;
+bool fg_exec = false;
+
+void 
+handleChildDone(int signal)
+{
+  pid_t pid;
+  int status;
+
+  pid = waitpid(WAIT_ANY, &status, WNOHANG | WUNTRACED);
+
+  if (pid == -1) {
+  	perror("error");
+    return; 
+  }
+
+  if (pid > 0) {
+  	
+  	if (fpid == pid) {
+  		fpid = -1;
+  		fg_exec = false;
+  	}
+
+    if (WIFSIGNALED(status)) {
+       printf("[%d] Terminated (Signal %d)\n", pid, WTERMSIG(status));
+       return;
+    }
+
+  	if (WIFSTOPPED(status)) {
+  		printf("[%d] Finished (Signal %d)\n", pid, WSTOPSIG(status));
+  	    return;
+  	}
+
+  }
+}
+
 /*-----------------------------------------------
    QUASH UTILITY FUNCTIONS
 ---------------------------------------------- */
@@ -65,7 +103,7 @@ qsetenv(map<string, string> *envVars, char *name, char *value)
 /*
  * Display command line message to prompt user for input
  */
-int
+int 
 prompt(string cwd, char *qargv[])
 {
 	string input, qarg;
@@ -110,8 +148,9 @@ main(int argc, char *argv[])
 {
 	map<string, string> envVars;
 	char *qargv[MAX_ARGS];
-	int qargc = 0;
+	int qargc;
 	char cwd[CWD_BUFSIZE];
+	pid_t pid;
 
 	// Set up the quash environment
 	init(&envVars);
@@ -119,6 +158,8 @@ main(int argc, char *argv[])
 	// Set up space for input args
 	for(int i=0; i<MAX_ARGS; i++)
 		qargv[i] = new char[256];
+
+    signal(SIGCHLD, handleChildDone);
 
 	// User input loop
 	do
@@ -160,18 +201,23 @@ main(int argc, char *argv[])
 
 		// Program Execution
 		else {
+			pid = fork();
+            
 			// Search PATH and current directory
-
 			// Check if foreground or background (&)
 			// need to use waitpid() somehow. need read manual.
-			if (strcmp(qargv[qargc-1], "&") == 0) {
-				int pid = fork();
-				if (pid == 0)
-					execl(qargv[0], qargv[0], NULL);
-			} else {
-				system(qargv[0]);
+			if (pid == 0) {
+				execl(qargv[0], qargv[0], NULL);
+				exit(0);
+            } else {
+				if (strcmp(qargv[qargc-1], "&") == 0) {
+					printf("[%d] Running in background\n", pid);
+				} else {
+					fpid = pid;
+                	fg_exec = true;
+			    	while(fg_exec) pause();
+				}
 			}
-
 			// Error
 			//cout << "'" << qargv[0] << "'" << " is not a recognized command" << endl;
 		}
