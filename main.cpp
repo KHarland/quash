@@ -15,7 +15,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-
+//quash libs
 #include "builtin.h"
 
 /* CWD_BUFSIZE
@@ -188,10 +188,12 @@ main(int argc, char *argv[])
 		// Get command
 		getcwd(cwd, CWD_BUFSIZE);
 		qargc = prompt(cwd, qargv);
-
+		
 		// Run cd
 		if (strcmp(qargv[0], "cd") == 0) {
 			if (qargc < 2) {
+				cd(qgetenv(&envVars, "HOME"));
+			} else if (strcmp(qargv[1], "~") == 0) {
 				cd(qgetenv(&envVars, "HOME"));
 			} else {
 				if (cd(qargv[1]) < 0)
