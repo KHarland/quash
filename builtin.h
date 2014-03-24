@@ -19,11 +19,12 @@ using namespace std;
 /* 
  * Change working directory to path
  */
-void
+int
 cd(const char* path)
 {
 	if (chdir(path) < 0)
-		perror("error");
+		return -1;
+	return 1;
 }
 
 /* 
@@ -40,11 +41,20 @@ pwd()
 		cout << cwd << endl;
 }
 
+
+/*
+ * Tell if the given filename is hidden
+ */
+bool isHidden(const char *fname)
+{
+	return fname[0] == '.'; 
+}
+
 /*
  * List the specified path
  */
 void
-ls(const char* path)
+ls(const char *path, char *flags, int numFlags) 
 {
 	int lasterr = errno;
 	DIR *dir;
@@ -62,13 +72,12 @@ ls(const char* path)
 					perror("error");
 				else
 					break;
-			} else {
+			} else if (!isHidden(entry->d_name)){
 				cout << entry->d_name << endl;
 			}
 		}
-		
 		closedir(dir);
-	}	
+	}
 }
 
 #endif//BUILTIN_H
