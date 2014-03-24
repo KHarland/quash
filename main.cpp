@@ -37,6 +37,11 @@
  */
 #define PATH_DELIM ':'
 
+/* ENV_DELIM 
+ * Delimiter for environment variables
+ */
+#define ENV_DELIM '='
+
 /* INTERFACE_[PREFX|SEPARATOR|SUFFIX]
  * These constants make up the title that gets displayed when the user is 
  * prompted for input via the command line. 
@@ -98,25 +103,6 @@ handleChildDone(int signal)
 /*-----------------------------------------------
    QUASH UTILITY FUNCTIONS
 ---------------------------------------------- */
-
-/*
- * Get an environment variable
- */
-const char *
-qgetenv(map<string, string> *envVars, string name)
-{
-	return envVars->find(name)->second.c_str();
-}
-
-/*
- * Set an environment variable
- */
-void
-qsetenv(map<string, string> *envVars, char *name, char *value)
-{
-	(*envVars)[string(name)] = string(value);
-}
-
 
 /*
  * Display command line message to prompt user for input
@@ -192,9 +178,9 @@ main(int argc, char *argv[])
 		// Run cd
 		if (strcmp(qargv[0], "cd") == 0) {
 			if (qargc < 2) {
-				cd(qgetenv(&envVars, "HOME"));
+				cd(getenv("HOME"));
 			} else if (strcmp(qargv[1], "~") == 0) {
-				cd(qgetenv(&envVars, "HOME"));
+				cd(getenv("HOME"));
 			} else {
 				if (cd(qargv[1]) < 0)
 					cout << qargv[1] << ": no such directory" << endl;
@@ -203,22 +189,31 @@ main(int argc, char *argv[])
 
 		// Run set
 		else if (strcmp(qargv[0], "set") == 0) {
-			if (qargc > 2) {
-				qsetenv(&envVars, qargv[1], qargv[2]);
+			stringstream ss(qargv[1]);
+			string name, value;
+			int overwrite = 1;
+
+			getline(ss, name, ENV_DELIM);
+			getline(ss, value, ENV_DELIM);
+
+			if (qargc > 1) {
+				if (setenv(name.c_str(), value.c_str(), overwrite) < 0) {
+					perror("set");
+				}
 			} else {
-				cout << "usage: set environment_variable value" << endl;
+				cout << "usage: set name=value" << endl;
 			}
 		}
 
 		// Run get
 		else if (strcmp(qargv[0], "get") == 0) {
 			if (qargc > 1) {
-				const char* value = qgetenv(&envVars, qargv[1]);
+				const char *value = getenv(qargv[1]);
 
 				if (strcmp(value, qargv[1]) == 0)
 					cout << "Item does not exist" << endl;
 				else
-					cout << qargv[1] << ":" << qgetenv(&envVars, qargv[1]) << endl;
+					cout << qargv[1] << ":" << getenv(qargv[1]) << endl;
 			} else {
 				cout << "usage: get environment_variable" << endl;
 			}
@@ -235,39 +230,17 @@ main(int argc, char *argv[])
             
 			if (pid == 0) {
 				
-				stringstream ss(qgetenv(&envVars, "PATH"));
-				string curPath;
-				char cmdbuf[128];
+				if (strcmp(qargv[qargc-1], "&") == 0)
+					qargv[qargc-1] = NULL;
+				else
+					qargv[qargc] = NULL;
 
-				while(ss.good())
-				{
-					// get next path
-					getline(ss, curPath, PATH_DELIM);
-
-					// zero the cmdbuf
-					memset(cmdbuf, 0, 128);
-					cmdbuf[0] = '\0';
-
-					// set first param as path to executable
-					strcat(cmdbuf, curPath.c_str());
-					strcat(cmdbuf, "/");
-					strcat(cmdbuf, qargv[0]);
-
-					// replace the last argument with NULL pointer
-					// if the last argument is an ampersand
-					if (strcmp(qargv[qargc-1], "&") == 0)
-						qargv[qargc-1] = NULL;
-					else
-						qargv[qargc] = NULL;
-
-					// execute
-					execv(cmdbuf, qargv);
+				// execute
+				if (execvp(qargv[0], qargv) < 0) {
+					perror(qargv[0]);
+					exit(-1);
 				}
-
-				// command not found
-				perror(qargv[0]);
-				exit(-1);
-				
+			
 			} else {
 				
 				if (strcmp(qargv[qargc-1], "&") == 0) {
