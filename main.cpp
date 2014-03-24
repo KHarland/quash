@@ -75,6 +75,12 @@ handleChildDone(int signal)
 	  	if (fpid == pid) {
 	  		fpid = -1;
 	  		fg_exec = false;
+	  		return;
+	  	}
+
+	  	if (WIFEXITED(status)) {
+	  		printf("[%d] Finished\n", pid);
+	  		return;
 	  	}
 
 		if (WIFSIGNALED(status)) {
@@ -177,7 +183,7 @@ main(int argc, char *argv[])
 	signal(SIGCHLD, handleChildDone);
 
 	// User input loop
-	do
+	while(true)
 	{
 		// Get command
 		getcwd(cwd, CWD_BUFSIZE);
@@ -185,10 +191,12 @@ main(int argc, char *argv[])
 
 		// Run cd
 		if (strcmp(qargv[0], "cd") == 0) {
-			if (qargc < 2)
+			if (qargc < 2) {
 				cd(qgetenv(&envVars, "HOME"));
-			else
-				cd(qargv[1]);
+			} else {
+				if (cd(qargv[1]) < 0)
+					cout << qargv[1] << ": no such directory" << endl;
+			}
 		}
 
 		// Run set
@@ -212,6 +220,11 @@ main(int argc, char *argv[])
 			} else {
 				cout << "usage: get environment_variable" << endl;
 			}
+		}
+
+		// Exit the program
+		else if (strcmp(qargv[0], "exit") == 0 || strcmp(qargv[0], "quit") == 0) {
+			break;
 		}
 
 		// Program Execution
@@ -257,8 +270,7 @@ main(int argc, char *argv[])
 				}
 			}
 		}
-
-	} while(strcmp(qargv[0], "exit") != 0 && strcmp(qargv[0], "quit") != 0);
+	} 
 
 	//deallocate variables and exit quash
 	for(int i=0; i<MAX_ARGS; i++)
