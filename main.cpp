@@ -118,7 +118,6 @@ tokenize(string input, Job *jobs)
 	while(ss.good())
 	{
 		ss >> arg;
-	
 		
 		if (arg.find_first_not_of(' ') == string::npos) {
 			; //empty, discard
