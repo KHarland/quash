@@ -23,10 +23,13 @@ using namespace std;
  * 
  * MAX_ARGS
  * This is the maximum number of arguments that can be passed via the command 
- * line to quash. in reality qargv should be able to handle an arbitrarily
+ * line to quash. in reality argv should be able to handle an arbitrarily
  * large number of arguments, but for the sake of this argument, we will use
- * a simple constant length array to keep from having to resize the qargv
+ * a simple constant length array to keep from having to resize the argv
  * array for different numbers of arguments
+ * 
+ * MAX_JOBS
+ * Maxmimum number of jobs that can be run concurrently
  * 
  * PATH_DELIM
  * Delimiter for directories of PATH environment variables
@@ -40,14 +43,20 @@ using namespace std;
  */
 #define CWD_BUFSIZE 1024
 #define MAX_ARGS 100
+#define MAX_JOBS 100
 #define PATH_DELIM ':'
 #define ENV_DELIM '='
 #define INTERFACE_PREFIX "quash"
 #define INTERFACE_SEPARATOR ":"
 #define INTERFACE_SUFFIX ">"
+#define EXIT 0
+#define CONTINUE 1
+
 
 pid_t fpid = -1;
 bool fg_exec = false;
+int nextJid = 1;
+map<int, int> job_pid;
 
 /*
  * Signal handler for child processes
@@ -94,34 +103,229 @@ handleChildDone(int signal)
    QUASH UTILITY FUNCTIONS
 ---------------------------------------------- */
 
-/*
- * Display command line message to prompt user for input
- */
 int 
-prompt(string cwd, char *qargv[])
+tokenize(string input, Job *jobs)
 {
-	string input, qarg;
-	int qargc = 0;
-
-	cout << INTERFACE_PREFIX << INTERFACE_SEPARATOR << cwd << INTERFACE_SUFFIX << ' ';
-	getline(cin, input);
+	string arg;
+	int curJob = 0;
 
 	if (input.length() == 0)
-		return qargc;
+		return 0;
 
 	stringstream ss(input);
+	jobs[curJob].id = nextJid++;
 
 	while(ss.good())
 	{
-		ss >> qarg;
-		strcpy(qargv[qargc++], qarg.c_str());
+		ss >> arg;
+	
+		
+		if (arg.find_first_not_of(' ') == string::npos) {
+			; //empty, discard
+
+		// Increment to the next job if a pipe is passed
+		} else if (strcmp(arg.c_str(), "|") == 0) {
+			curJob++;
+			jobs[curJob].id = nextJid;
+			nextJid++;
+
+		// This job will run in the background if we see an ampersand
+		} else if (strcmp(arg.c_str(), "&") == 0) {
+			jobs[curJob].bg = true;
+
+		// Add the argument to this job's argv list
+		} else {
+			strcpy(jobs[curJob].argv[jobs[curJob].argc++], arg.c_str());
+		}
 	}
 
-	return qargc;
+	return curJob+1;
 }
 
+
 /*
- * Environment variable initalizations for quash
+ * Display command line message to prompt user for input. Return the number 
+ * of jobs demanded.
+ */
+int
+prompt(string cwd, Job *jobs)
+{
+	string input;
+
+	cout 	<< INTERFACE_PREFIX 
+			<< INTERFACE_SEPARATOR 
+			<< cwd 
+			<< INTERFACE_SUFFIX << ' ';
+
+	getline(cin, input);
+
+	return tokenize(input, jobs);
+}
+
+
+/*
+ * Execute each given set of commands as a seperate job. if exit is called, 
+ * kill all jobs and tell main thread to exit.
+ */
+int
+executeJobs(int numJobs, Job *jobs)
+{
+	int numPipes = numJobs-1;
+	int pipefd[numPipes][2];
+	pid_t pid;
+
+	// set up pipe for I/O redirection
+	for(int i=0; i<numPipes; i++)
+	{
+		if (pipe(pipefd[i]) < 0) {
+			perror("pipe");
+			return EXIT;
+		}
+	}
+
+	// loop through jobs
+	for (int i=0; i<numJobs; i++)
+	{
+		// Run cd
+		if (strcmp(jobs[i].argv[0], "cd") == 0) {
+
+			if (jobs[i].argc < 2)
+				cd(getenv("HOME"));
+			else if (strcmp(jobs[i].argv[1], "~") == 0)
+				cd(getenv("HOME"));
+			else
+				if (cd(jobs[i].argv[1]) < 0)
+					perror("cd");
+		}
+
+		// Run set
+		else if (strcmp(jobs[i].argv[0], "set") == 0) {
+			
+			int overwrite = 1;
+			stringstream ss(jobs[i].argv[1]);
+			string name, value;
+			
+			getline(ss, name, ENV_DELIM);
+			getline(ss, value, ENV_DELIM);
+
+			if (jobs[i].argc > 1)
+				if (setenv(name.c_str(), value.c_str(), overwrite) < 0)
+					perror("set");
+			else
+				cout << "usage: set name=value" << endl;
+		}
+
+		// Run get
+		else if (strcmp(jobs[i].argv[0], "get") == 0) {
+		
+			// variable provided
+			if (jobs[i].argc > 1) {
+				const char *value = getenv(jobs[i].argv[1]);
+				
+				if (strcmp(value, jobs[i].argv[1]) == 0)
+					cout << "Item does not exist" << endl;
+				else
+					cout 	<< jobs[i].argv[1] 
+							<< ":" 
+							<< getenv(jobs[i].argv[1]) 
+							<< endl;
+			
+			// no arguments passed
+			} else {
+				cout << "usage: get environment_variable" << endl;
+			}
+
+		}
+
+		// Exit the program
+		else if (strcmp(jobs[i].argv[0], "exit") == 0 || 
+				 strcmp(jobs[i].argv[0], "quit") == 0) 
+		{
+			return EXIT;
+		}
+
+		// Execute file
+		else if(jobs[i].argc > 0) {
+
+			pid = fork();
+
+	        // child
+			if (pid == 0) {
+
+				if (numPipes > 0) {
+
+					// this is the first pipe, we only need the write end.
+					if (i == 0) {
+						if (dup2(pipefd[i][1], STDOUT_FILENO) < 0)
+							perror("dup2");
+
+					// middle pipe we need to redirect both ends.
+					} else if (i < numPipes) {
+						if (dup2(pipefd[i-1][0], STDIN_FILENO) < 0)
+							perror("dup2");
+
+						if (dup2(pipefd[i][1], STDOUT_FILENO) < 0)
+							perror("dup2");
+
+					// last pipe, close write end and redirect stdin
+					} else if (i == numPipes) {
+						if (dup2(pipefd[i-1][0], STDIN_FILENO) < 0)
+							perror("dup2");
+					}
+		
+					// at this point we aren't using any of the old file
+					// descriptors. Go ahead and close them all.
+					for (int k=0; k<numPipes; k++)
+					{	
+						// main already closed this write end.
+						// this will fail and set errno.
+						if (close(pipefd[k][1]) < 0);
+						
+
+						if (close(pipefd[k][0]) < 0)
+							perror("close");
+					}
+				}
+
+				jobs[i].argv[jobs[i].argc] = NULL;
+
+				// exec file
+				if (execvp(jobs[i].argv[0], jobs[i].argv) < 0) {
+					perror(jobs[i].argv[0]);
+					exit(-1);
+				}
+
+			// parent
+			} else {
+
+				// last child is done, close write of last pipe
+				if (i > 0) {
+					if (close(pipefd[i-1][1]) < 0) {
+						perror("close");
+						cout << "parent\n";
+					}
+				}
+
+				// is the current process a background process?
+				if (jobs[i].bg) {
+					printf("[%d] %d Running in background\n", jobs[i].id, pid);
+
+				// nope, foreground
+				} else {
+					fpid = pid;
+					fg_exec = true;
+					while(fg_exec) pause();
+				}
+			}
+		}
+	}
+
+	return CONTINUE;
+}
+
+
+/*
+ * Quash welcome message
  */
 void 
 welcome()
@@ -136,130 +340,38 @@ welcome()
 	{
 		string line;
 		getline(inf, line);
-
 		cout << line << endl;
 	}	
 
 	cout	<< "-------------------------------------------------" << endl;	
 }
-
-/* 
- * Deallocate memory and exit program
- */
-void
-smash(){;}
-
+	
 /*-----------------------------------------------
    MAIN IMPLEMENTATION
 ---------------------------------------------- */
-
 int 
 main(int argc, char *argv[], char **envp)
 {
-	char *qargv[MAX_ARGS], cwd[CWD_BUFSIZE];
-	int qargc;
-	pid_t pid;
+	char cwd[CWD_BUFSIZE];
+	int numJobs, status;
 
-	// Welcome
 	welcome();
-
-	// Set up space for input args
-	for(int i=0; i<MAX_ARGS; i++)
-		qargv[i] = new char[256];
-
 	signal(SIGCHLD, handleChildDone);
 
-	// User input loop
+	// Loop for user input
 	while(true)
-	{
-		// Get command
+	{	
+		Job jobs[MAX_JOBS];
 		getcwd(cwd, CWD_BUFSIZE);
-		qargc = prompt(cwd, qargv);
-		
-		// Run cd
-		if (strcmp(qargv[0], "cd") == 0) {
-			if (qargc < 2) {
-				cd(getenv("HOME"));
-			} else if (strcmp(qargv[1], "~") == 0) {
-				cd(getenv("HOME"));
-			} else {
-				if (cd(qargv[1]) < 0)
-					perror("cd");
-			}
+
+		numJobs = prompt(cwd, jobs);
+
+		if (numJobs > 0) {
+			status = executeJobs(numJobs, jobs);
+			if (status == EXIT)
+				return 0;
 		}
-
-		// Run set
-		else if (strcmp(qargv[0], "set") == 0) {
-			stringstream ss(qargv[1]);
-			string name, value;
-			int overwrite = 1;
-
-			getline(ss, name, ENV_DELIM);
-			getline(ss, value, ENV_DELIM);
-
-			if (qargc > 1) {
-				if (setenv(name.c_str(), value.c_str(), overwrite) < 0) {
-					perror("set");
-				}
-			} else {
-				cout << "usage: set name=value" << endl;
-			}
-		}
-
-		// Run get
-		else if (strcmp(qargv[0], "get") == 0) {
-			if (qargc > 1) {
-				const char *value = getenv(qargv[1]);
-
-				if (strcmp(value, qargv[1]) == 0)
-					cout << "Item does not exist" << endl;
-				else
-					cout << qargv[1] << ":" << getenv(qargv[1]) << endl;
-			} else {
-				cout << "usage: get environment_variable" << endl;
-			}
-		}
-
-		// Exit the program
-		else if (strcmp(qargv[0], "exit") == 0 || strcmp(qargv[0], "quit") == 0) {
-			break;
-		}
-
-		// Program Execution
-		else if(qargc > 0) {
-			pid = fork();
-            
-			if (pid == 0) {
-				
-				if (strcmp(qargv[qargc-1], "&") == 0)
-					qargv[qargc-1] = NULL;
-				else
-					qargv[qargc] = NULL;
-
-				// execute
-				if (execvp(qargv[0], qargv) < 0) {
-					perror(qargv[0]);
-					exit(-1);
-				}
-			
-			} else {
-				
-				if (strcmp(qargv[qargc-1], "&") == 0) {
-					printf("[%d] Running in background\n", pid);
-				} else {
-					fpid = pid;
- 					fg_exec = true;
-					while(fg_exec) pause();
-				}
-			}
-		}
-	} 
-
-	//deallocate variables and exit quash
-	for(int i=0; i<MAX_ARGS; i++)
-		delete [] qargv[i];
-
-	smash();
+	}
 
 	return 0;
 }
