@@ -276,7 +276,6 @@ executeJobs(int numJobs, Job *jobs)
 						// this will fail and set errno.
 						if (close(pipefd[k][1]) < 0);
 						
-
 						if (close(pipefd[k][0]) < 0)
 							perror("close");
 					}
@@ -326,10 +325,10 @@ void
 welcome()
 {
 	ifstream inf(".quashrc");
-	cout	<< "-------------------------------------------------" << endl
-			<< "        Quash v1.0.0  Copyright (c) 2014         " << endl
-			<< "      Authors: Kendal Harland   Adam Smith       " << endl
-			<< "-------------------------------------------------" << endl;
+	cout << "-------------------------------------------------" << endl
+		<< "        Quash v1.0.0  Copyright (c) 2014         " << endl
+		<< "      Authors: Kendal Harland   Adam Smith       " << endl
+		<< "-------------------------------------------------" << endl;
 
 	while (!inf.eof())
 	{
@@ -338,7 +337,7 @@ welcome()
 		cout << line << endl;
 	}	
 
-	cout	<< "-------------------------------------------------" << endl;	
+	cout << "-------------------------------------------------" << endl;	
 }
 	
 /*-----------------------------------------------
