@@ -71,8 +71,8 @@ handleChildDone(int signal)
 
 	if (pid == -1) {
 		perror("error");
-	    return;
-  	}
+		return;
+	}
 
 	if (pid > 0) {
   	
@@ -119,11 +119,11 @@ tokenize(string input, Job *jobs)
 	{
 		ss >> arg;
 		
-		if (arg.find_first_not_of(' ') == string::npos) {
-			; //empty, discard
+		// arg is empty. do nothing.
+		if (arg.find_first_not_of(' ') == string::npos) {;}
 
 		// Increment to the next job if a pipe is passed
-		} else if (strcmp(arg.c_str(), "|") == 0) {
+		else if (strcmp(arg.c_str(), "|") == 0) {
 			curJob++;
 			jobs[curJob].id = nextJid;
 			nextJid++;
@@ -151,10 +151,10 @@ prompt(string cwd, Job *jobs)
 {
 	string input;
 
-	cout 	<< INTERFACE_PREFIX 
-			<< INTERFACE_SEPARATOR 
-			<< cwd 
-			<< INTERFACE_SUFFIX << ' ';
+	cout << INTERFACE_PREFIX 
+		<< INTERFACE_SEPARATOR 
+		<< cwd 
+		<< INTERFACE_SUFFIX << ' ';
 
 	getline(cin, input);
 
@@ -192,8 +192,7 @@ executeJobs(int numJobs, Job *jobs)
 				cd(getenv("HOME"));
 			else if (strcmp(jobs[i].argv[1], "~") == 0)
 				cd(getenv("HOME"));
-			else
-				if (cd(jobs[i].argv[1]) < 0)
+			else if (cd(jobs[i].argv[1]) < 0)
 					perror("cd");
 		}
 
@@ -224,10 +223,10 @@ executeJobs(int numJobs, Job *jobs)
 				if (strcmp(value, jobs[i].argv[1]) == 0)
 					cout << "Item does not exist" << endl;
 				else
-					cout 	<< jobs[i].argv[1] 
-							<< ":" 
-							<< getenv(jobs[i].argv[1]) 
-							<< endl;
+					cout << jobs[i].argv[1] 
+						<< ":" 
+						<< getenv(jobs[i].argv[1]) 
+						<< endl;
 			
 			// no arguments passed
 			} else {
@@ -245,14 +244,11 @@ executeJobs(int numJobs, Job *jobs)
 
 		// Execute file
 		else if(jobs[i].argc > 0) {
-
 			pid = fork();
 
-	        // child
+			// child
 			if (pid == 0) {
-
 				if (numPipes > 0) {
-
 					// this is the first pipe, we only need the write end.
 					if (i == 0) {
 						if (dup2(pipefd[i][1], STDOUT_FILENO) < 0)
