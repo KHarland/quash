@@ -57,6 +57,8 @@ pid_t fpid = -1;
 bool fg_exec = false;
 int nextJid = 1;
 map<int, int> jid_pid;
+map<int, string> jid_cmd;
+
 extern char ** environ;
 
 /*
@@ -83,6 +85,7 @@ handleChildDone(int signal)
       map<int, int>::iterator jid = jid_pid.find(i);
       if (jid != jid_pid.end() && jid->second == pid) {
         jid_pid.erase(jid);
+	jid_cmd.erase(jid_cmd.find(i));
         break;
       }
     }
@@ -234,7 +237,6 @@ executeJobs(int numJobs, Job *jobs)
 	// loop through jobs
 	for (int i=0; i<numJobs; i++)
 	{
-
 		// Run cd
 		if (strcmp(jobs[i].argv[0], "cd") == 0) {
 			if (jobs[i].argc < 2)
@@ -247,12 +249,12 @@ executeJobs(int numJobs, Job *jobs)
 
 		//print jobs
 		else if (strcmp(jobs[i].argv[0], "jobs") == 0) {
-      for (int j=0; j<nextJid; j++)
-      {
-        map<int, int>::iterator jid = jid_pid.find(j);
+			for (int j=0; j<nextJid; j++)
+			{
+				map<int, int>::iterator jid = jid_pid.find(j);
 
-        if (jid != jid_pid.end())
-  				printf("[%d] %d %s\n", j, jid->second, jobs[i].argv[0]);
+			        if (jid != jid_pid.end())
+					printf("[%d] %d %s\n", j, jid->second, jid_cmd.find(j)->second.c_str());
 			}
 		}
 
@@ -384,7 +386,8 @@ executeJobs(int numJobs, Job *jobs)
 
         // associate this job id with the child's pid
         jid_pid.insert(pair<int, int>(jobs[i].id, jobs[i].pid)); 
-				
+	jid_cmd.insert(pair<int, string>(jobs[i].id, string(jobs[i].argv[0])));
+
         // last child is done, close write of last pipe
 				if (i > 0) {
 					if (close(pipefd[i-1][1]) < 0) {
