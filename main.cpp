@@ -129,11 +129,12 @@ tokenize(string input, Job *jobs)
 			jobs[curJob].id = nextJid;
 			nextJid++;
 
-		// 
+		// Redirect stdout
 		} else if (strcmp(arg.c_str(), ">") == 0) {
 			ss >> arg;
 			jobs[curJob].outputFile = arg;
-		//
+		
+		// Redirect stdin
 		} else if (strcmp(arg.c_str(), "<") == 0) {
 			ss >> arg;
 			jobs[curJob].inputFile = arg;
@@ -147,6 +148,7 @@ tokenize(string input, Job *jobs)
 			strcpy(jobs[curJob].argv[jobs[curJob].argc++], arg.c_str());
 		}
 	}
+
 	return curJob+1;
 }
 
@@ -155,7 +157,7 @@ void
 redirectStdIn(string &filename)
 {
 	FILE *f = fopen(filename.c_str(), "r");
-	if(f == NULL)
+	if(f == NULL) 
 	{
 		perror("file redirect error");
 	} else {
@@ -294,7 +296,9 @@ executeJobs(int numJobs, Job *jobs)
 
 			// child
 			if (pid == 0) {
+				
 				if (!jobs[i].inputFile.empty() || !jobs[i].outputFile.empty()) {
+				
 					if (!jobs[i].inputFile.empty()) {
 						redirectStdIn(jobs[i].inputFile);
 					}
