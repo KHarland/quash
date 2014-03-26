@@ -9,6 +9,8 @@ struct Job
 	int id;
 	bool bg;
 	bool alive;
+	string inputFile;
+	string outputFile;
 
 	Job()
 	{
@@ -19,6 +21,8 @@ struct Job
 		id = 0;
 		bg = false;
 		alive = false;
+		inputFile = "";
+		outputFile = "";
 	}
 
 	~Job()

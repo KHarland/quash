@@ -57,6 +57,7 @@ pid_t fpid = -1;
 bool fg_exec = false;
 int nextJid = 1;
 map<int, int> job_pid;
+extern char ** environ;
 
 /*
  * Signal handler for child processes
@@ -128,6 +129,15 @@ tokenize(string input, Job *jobs)
 			jobs[curJob].id = nextJid;
 			nextJid++;
 
+		// 
+		} else if (strcmp(arg.c_str(), ">") == 0) {
+			ss >> arg;
+			jobs[curJob].outputFile = arg;
+		//
+		} else if (strcmp(arg.c_str(), "<") == 0) {
+			ss >> arg;
+			jobs[curJob].inputFile = arg;
+
 		// This job will run in the background if we see an ampersand
 		} else if (strcmp(arg.c_str(), "&") == 0) {
 			jobs[curJob].bg = true;
@@ -137,10 +147,37 @@ tokenize(string input, Job *jobs)
 			strcpy(jobs[curJob].argv[jobs[curJob].argc++], arg.c_str());
 		}
 	}
-
 	return curJob+1;
 }
 
+
+void
+redirectStdIn(string &filename)
+{
+	FILE *f = fopen(filename.c_str(), "r");
+	if(f == NULL)
+	{
+		perror("file redirect error");
+	} else {
+		// Rename STDIN.
+		dup2( fileno(f), STDIN_FILENO);
+		fclose(f);
+	}
+}
+
+void
+redirectStdOut(string &filename)
+{
+	FILE *f = fopen(filename.c_str(), "w+");
+	if(f == NULL)
+	{
+		perror("file redirect error");
+	} else {
+		// Rename STDIN.
+		dup2( fileno(f), STDOUT_FILENO);
+		fclose(f);
+	}
+}
 
 /*
  * Display command line message to prompt user for input. Return the number 
@@ -206,11 +243,12 @@ executeJobs(int numJobs, Job *jobs)
 			getline(ss, name, ENV_DELIM);
 			getline(ss, value, ENV_DELIM);
 
-			if (jobs[i].argc > 1)
+			if (jobs[i].argc > 1) {
 				if (setenv(name.c_str(), value.c_str(), overwrite) < 0)
 					perror("set");
-			else
+			} else {
 				cout << "usage: set name=value" << endl;
+			}
 		}
 
 		// Run get
@@ -248,7 +286,17 @@ executeJobs(int numJobs, Job *jobs)
 
 			// child
 			if (pid == 0) {
-				if (numPipes > 0) {
+				if (!jobs[i].inputFile.empty() || !jobs[i].outputFile.empty()) {
+					if (!jobs[i].inputFile.empty()) {
+						cout << "input?" << endl;
+						redirectStdIn(jobs[i].inputFile);
+					}
+
+					if (!jobs[i].outputFile.empty()) {
+						redirectStdOut(jobs[i].outputFile);
+					}
+
+				} else if (numPipes > 0) {
 					// this is the first pipe, we only need the write end.
 					if (i == 0) {
 						if (dup2(pipefd[i][1], STDOUT_FILENO) < 0)
@@ -283,8 +331,11 @@ executeJobs(int numJobs, Job *jobs)
 
 				jobs[i].argv[jobs[i].argc] = NULL;
 
+				setpgid(0, 0);
+
 				// exec file
-				if (execvp(jobs[i].argv[0], jobs[i].argv) < 0) {
+				// if (execvpe(jobs[i].argv[0], jobs[i].argv, environ) < 0) { //for use with linux
+				if (execvp(jobs[i].argv[0], jobs[i].argv) < 0) { //for use with os x
 					perror(jobs[i].argv[0]);
 					exit(-1);
 				}
@@ -369,3 +420,5 @@ main(int argc, char *argv[], char **envp)
 
 	return 0;
 }
+
+
