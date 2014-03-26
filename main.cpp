@@ -160,7 +160,7 @@ redirectStdIn(string &filename)
 		perror("file redirect error");
 	} else {
 		// Rename STDIN.
-		dup2( fileno(f), STDIN_FILENO);
+		dup2(fileno(f), STDIN_FILENO);
 		fclose(f);
 	}
 }
@@ -174,7 +174,7 @@ redirectStdOut(string &filename)
 		perror("file redirect error");
 	} else {
 		// Rename STDIN.
-		dup2( fileno(f), STDOUT_FILENO);
+		dup2(fileno(f), STDOUT_FILENO);
 		fclose(f);
 	}
 }
@@ -288,7 +288,6 @@ executeJobs(int numJobs, Job *jobs)
 			if (pid == 0) {
 				if (!jobs[i].inputFile.empty() || !jobs[i].outputFile.empty()) {
 					if (!jobs[i].inputFile.empty()) {
-						cout << "input?" << endl;
 						redirectStdIn(jobs[i].inputFile);
 					}
 
@@ -331,7 +330,8 @@ executeJobs(int numJobs, Job *jobs)
 
 				jobs[i].argv[jobs[i].argc] = NULL;
 
-				setpgid(0, 0);
+				if (jobs[i].bg)
+					setpgid(0, 0);
 
 				// exec file
 				// if (execvpe(jobs[i].argv[0], jobs[i].argv, environ) < 0) { //for use with linux
