@@ -239,7 +239,7 @@ executeJobs(int numJobs, Job *jobs)
 		//print jobs
 		else if (strcmp(jobs[i].argv[0], "jobs") == 0) {
 			for (int i=0; i< sizeof(jobs)/sizeof(jobs[0]); i++) {
-				printf("[%d] %d\n", jobs[i].id, pid); // also need to print command associated with job
+				printf("[%d] %d\n", jobs[i].id, jobs[i].pid); // also need to print command associated with job
 			}
 		}
 
