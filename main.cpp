@@ -233,6 +233,13 @@ executeJobs(int numJobs, Job *jobs)
 					perror("cd");
 		}
 
+		//print jobs
+		else if (strcmp(jobs[i].argv[0], "jobs") == 0) {
+			for (int i=0; i< sizeof(jobs)/sizeof(jobs[0]); i++) {
+				printf("[%d] %d\n", jobs[i].id, pid); // also need to print command associated with job
+			}
+		}
+
 		// Run set
 		else if (strcmp(jobs[i].argv[0], "set") == 0) {
 			
@@ -330,6 +337,7 @@ executeJobs(int numJobs, Job *jobs)
 
 				jobs[i].argv[jobs[i].argc] = NULL;
 
+				// set a new process group for background processes
 				if (jobs[i].bg)
 					setpgid(0, 0);
 
