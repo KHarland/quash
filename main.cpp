@@ -328,7 +328,8 @@ executeJobs(int numJobs, Job *jobs)
 					{	
 						// main already closed this write end.
 						// this will fail and set errno.
-						if (close(pipefd[k][1]) < 0);
+						if (close(pipefd[k][1]) < 0)
+							;
 						
 						if (close(pipefd[k][0]) < 0)
 							perror("close");
