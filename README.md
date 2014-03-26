@@ -10,13 +10,17 @@ quash
 
 [x] file execution with arguments
 
-[ ] I/O redirection via command line
+[x] I/O redirection via command line
 
-[x] IPC between child processes
+[x] IPC between (multiple) child processes
 
 [x] Environment variable manipulation
 
-[ ] kill running jobs
+[x] kill running jobs
 
 [x] Background and foreground execution
 
+
+Compilation:
+
+Simply run 'make'.
