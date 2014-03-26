@@ -373,8 +373,8 @@ executeJobs(int numJobs, Job *jobs)
 					setpgid(0, 0);
 
 				// exec file
-				// if (execvpe(jobs[i].argv[0], jobs[i].argv, environ) < 0) { //for use with linux
-				if (execvp(jobs[i].argv[0], jobs[i].argv) < 0) { //for use with os x
+				 if (execvpe(jobs[i].argv[0], jobs[i].argv, environ) < 0) { //for use with linux
+				//if (execvp(jobs[i].argv[0], jobs[i].argv) < 0) { //for use with os x
 					perror(jobs[i].argv[0]);
 					exit(-1);
 				}
