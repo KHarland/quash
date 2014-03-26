@@ -243,6 +243,16 @@ executeJobs(int numJobs, Job *jobs)
 			}
 		}
 
+		//print jobs
+		else if (strcmp(jobs[i].argv[0], "kill") == 0) {
+			stringstream ss(jobs[i].argv[1]);
+			pid_t value;
+			
+			ss >> value;
+
+			kill(value, SIGKILL);
+		}
+
 		// Run set
 		else if (strcmp(jobs[i].argv[0], "set") == 0) {
 			
@@ -365,9 +375,11 @@ executeJobs(int numJobs, Job *jobs)
 					}
 				}
 
+				jobs[i].pid = pid;
+
 				// is the current process a background process?
 				if (jobs[i].bg) {
-					printf("[%d] %d Running in background\n", jobs[i].id, pid);
+					printf("[%d] %d Running in background\n", jobs[i].id, jobs[i].pid);
 
 				// nope, foreground
 				} else {
