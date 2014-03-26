@@ -56,7 +56,7 @@ using namespace std;
 pid_t fpid = -1;
 bool fg_exec = false;
 int nextJid = 1;
-map<int, int> job_pid;
+map<int, int> jid_pid;
 extern char ** environ;
 
 /*
@@ -76,17 +76,27 @@ handleChildDone(int signal)
 	}
 
 	if (pid > 0) {
-  	
-	  	if (fpid == pid) {
-	  		fpid = -1;
-	  		fg_exec = false;
-	  		return;
-	  	}
 
-	  	if (WIFEXITED(status)) {
-	  		printf("[%d] Finished\n", pid);
-	  		return;
-	  	}
+    // This is hacky. we may have to live with it
+    for (int i=0; i<nextJid; i++)
+    {
+      map<int, int>::iterator jid = jid_pid.find(i);
+      if (jid != jid_pid.end() && jid->second == pid) {
+        jid_pid.erase(jid);
+        break;
+      }
+    }
+  	
+    if (fpid == pid) {
+      fpid = -1;
+	  	fg_exec = false;
+      return;
+	  }
+
+    if (WIFEXITED(status)) {
+      printf("[%d] Finished\n", pid);
+	  	return;
+    }
 
 		if (WIFSIGNALED(status)) {
 			printf("[%d] Terminated (Signal %d)\n", pid, WTERMSIG(status));
@@ -227,7 +237,6 @@ executeJobs(int numJobs, Job *jobs)
 
 		// Run cd
 		if (strcmp(jobs[i].argv[0], "cd") == 0) {
-
 			if (jobs[i].argc < 2)
 				cd(getenv("HOME"));
 			else if (strcmp(jobs[i].argv[1], "~") == 0)
@@ -238,12 +247,16 @@ executeJobs(int numJobs, Job *jobs)
 
 		//print jobs
 		else if (strcmp(jobs[i].argv[0], "jobs") == 0) {
-			for (int i=0; i< sizeof(jobs)/sizeof(jobs[0]); i++) {
-				printf("[%d] %d\n", jobs[i].id, jobs[i].pid); // also need to print command associated with job
+      for (int j=0; j<nextJid; j++)
+      {
+        map<int, int>::iterator jid = jid_pid.find(j);
+
+        if (jid != jid_pid.end())
+  				printf("[%d] %d %s\n", j, jid->second, jobs[i].argv[0]);
 			}
 		}
 
-		//print jobs
+		//print kill
 		else if (strcmp(jobs[i].argv[0], "kill") == 0) {
 			stringstream ss(jobs[i].argv[1]);
 			pid_t value;
@@ -367,15 +380,18 @@ executeJobs(int numJobs, Job *jobs)
 			// parent
 			} else {
 
-				// last child is done, close write of last pipe
+        jobs[i].pid = pid;
+
+        // associate this job id with the child's pid
+        jid_pid.insert(pair<int, int>(jobs[i].id, jobs[i].pid)); 
+				
+        // last child is done, close write of last pipe
 				if (i > 0) {
 					if (close(pipefd[i-1][1]) < 0) {
 						perror("close");
 						cout << "parent\n";
 					}
 				}
-
-				jobs[i].pid = pid;
 
 				// is the current process a background process?
 				if (jobs[i].bg) {
