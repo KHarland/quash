@@ -7,6 +7,7 @@ struct Job
 	char *argv[MAX_ARGS];
 	int argc;
 	int id;
+	int pid;
 	bool bg;
 	bool alive;
 	string inputFile;
