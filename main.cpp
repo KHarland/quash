@@ -56,7 +56,7 @@ using namespace std;
 pid_t fpid = -1;
 bool fg_exec = false;
 int nextJid = 1;
-map<int, int> job_pid;
+map<int, int> jid_pid;
 
 /*
  * Signal handler for child processes
@@ -185,6 +185,7 @@ executeJobs(int numJobs, Job *jobs)
 	// loop through jobs
 	for (int i=0; i<numJobs; i++)
 	{
+
 		// Run cd
 		if (strcmp(jobs[i].argv[0], "cd") == 0) {
 
